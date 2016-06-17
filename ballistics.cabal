@@ -4,7 +4,7 @@ synopsis:            Initial project template from stack
 description:         Please see README.md
 homepage:            https://github.com/zegkljan/ballistics#readme
 license:             BSD3
-license-file:        LICENSE
+-- license-file:        LICENSE
 author:              Jan Žegklitz
 maintainer:          zegkljan@gmail.com
 copyright:           2016 Jan Žegklitz
