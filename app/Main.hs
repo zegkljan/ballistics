@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Physics
 
 main :: IO ()
-main = someFunc
+main = putStrLn "blah"
