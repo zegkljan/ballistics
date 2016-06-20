@@ -1,6 +1,4 @@
-module Physics ( module Physics
-               , Vec3D )
-where
+module Physics where
 
 import           Data.Vec as V
 
@@ -29,7 +27,7 @@ data Projectile = Projectile {
   radius   :: Double, -- ^ radius of the projectile ball [meter]
   mass     :: Double, -- ^ mass of the projectile [kilogram]
   dragCoef :: Double  -- ^ aerodynamic drag coefficient of the projectile
-}
+} deriving (Show)
 
 {-|
   Position and velocity coupled together.
@@ -38,7 +36,7 @@ data Projectile = Projectile {
 data PosVel = PosVel {
   position :: Vec3D, -- ^ position of the projectile [meter]
   velocity :: Vec3D  -- ^ velocity of the projectile [meter / second]
-}
+} deriving (Show)
 
 {-|
   Description of the environment.
@@ -46,7 +44,7 @@ data PosVel = PosVel {
 data World = World {
   gravity      :: VectorField, -- ^ gravitational field of the environment [meter / second^2]
   aeroDensity  :: Double,      -- ^ density of the air [kilogram / meter^3]
-  aeroVelocity :: VectorField  -- ^ velocity field of the air (wind velocitty field) [meter / second^2]
+  aeroVelocity :: VectorField  -- ^ velocity field of the air (wind velocity field) [meter / second^2]
 }
 
 {-|
@@ -55,7 +53,7 @@ data World = World {
 data SimSettings = SimSettings {
   sampleTime :: Double, -- ^ length of a simulation time step [second]
   maxSamples :: Int     -- ^ maximum number of simulation samples
-}
+} deriving (Show)
 
 type StoppingCondition = World -> Projectile -> PosVel -> Bool
 
@@ -63,11 +61,15 @@ simulate :: SimSettings -> World -> StoppingCondition -> Projectile -> PosVel ->
 simulate s w cond proj pv = undefined
 
 step :: SimSettings -> World -> StoppingCondition -> Projectile -> PosVel -> Maybe PosVel
-step ss w scond proj pv | scond w proj npv = Just npv
-                        | otherwise = Nothing
-                        where
-                          acc = acceleration proj pv w
-                          npv = undefined
+step ss w scond proj pv = let acc = acceleration proj pv w
+                              ts = pack (vec (sampleTime ss))
+                              nv = (ts * acc) + velocity pv
+                              np = (ts * velocity pv) + position pv
+                              npv = PosVel { position = np,
+                                             velocity = nv }
+                           in if scond w proj npv
+                              then Nothing
+                              else Just npv
 
 {-|
   Computes the total acceleration of the projectile.
