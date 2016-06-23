@@ -2,6 +2,8 @@ module Physics where
 
 import           Data.Vec as V
 
+import           Utils
+
 {-|
   Interval around zero that is considered to be zero.
 -}
@@ -31,11 +33,12 @@ data Projectile = Projectile {
 
 {-|
   Position and velocity coupled together.
-  It is essentialy a state of a flying projectile.
+  It is essentialy the state of a flying projectile.
 -}
 data PosVel = PosVel {
   position :: Vec3D, -- ^ position of the projectile [meter]
-  velocity :: Vec3D  -- ^ velocity of the projectile [meter / second]
+  velocity :: Vec3D, -- ^ velocity of the projectile [meter / second]
+  timeStep :: Int    -- ^ number of time step the position-velocity relates to
 } deriving (Show)
 
 {-|
@@ -58,35 +61,42 @@ data SimSettings = SimSettings {
 type StoppingCondition = World -> Projectile -> PosVel -> Bool
 
 simulate :: SimSettings -> World -> StoppingCondition -> Projectile -> PosVel -> [PosVel]
-simulate s w cond proj pv = undefined
+simulate s w cond proj = takeWhileInclusive (not . cond w proj) . iterate (step s w proj)
 
-step :: SimSettings -> World -> StoppingCondition -> Projectile -> PosVel -> Maybe PosVel
-step ss w scond proj pv = let acc = acceleration proj pv w
-                              ts = pack (vec (sampleTime ss))
-                              nv = (ts * acc) + velocity pv
-                              np = (ts * velocity pv) + position pv
-                              npv = PosVel { position = np,
-                                             velocity = nv }
-                           in if scond w proj npv
-                              then Nothing
-                              else Just npv
+step :: SimSettings -> World -> Projectile -> PosVel -> PosVel
+step ss w proj pv = let ts = pack (vec (sampleTime ss))
+                        pos = position pv
+                        vel = velocity pv
+                        k1 = vel
+                        m1 = acceleration proj pos k1 w
+                        k2 = vel + m1 * ts / 2.0
+                        m2 = acceleration proj pos (k2 * ts / 2.0) w
+                        k3 = vel + m2 * ts / 2.0
+                        m3 = acceleration proj pos (k3 * ts / 2.0) w
+                        k4 = vel + m3 * ts
+                        m4 = acceleration proj pos (k4 * ts) w
+                        nv = pos + 1.0 / 6.0 * ts * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
+                        np = vel + 1.0 / 6.0 * ts * (m1 + 2.0 * m2 + 2.0 * m3 + m4)
+                        npv = PosVel { position = np,
+                                       velocity = nv,
+                                       timeStep = timeStep pv + 1 }
+                     in npv
 
 {-|
   Computes the total acceleration of the projectile.
 -}
 acceleration :: Projectile
-             -> PosVel     -- ^ position + velocity
+             -> Vec3D      -- ^ position
+             -> Vec3D      -- ^ velocity
              -> World      -- ^ world
              -> Vec3D      -- ^ total acceleration
-acceleration proj pv w = let m = mass proj
-                             cs = crossSection proj
-                             dc = dragCoef proj
-                             pos = position pv
-                             vel = velocity pv
-                             aeroVel = aeroVelocity w pos
-                             g = gravity w pos
-                             aeroDrag = aeroDragForce (aeroDensity w) aeroVel vel cs dc
-                          in g + (aeroDrag / pack (vec m))
+acceleration proj pos vel w = let m = mass proj
+                                  cs = crossSection proj
+                                  dc = dragCoef proj
+                                  aeroVel = aeroVelocity w pos
+                                  g = gravity w pos
+                                  aeroDrag = aeroDragForce (aeroDensity w) aeroVel vel cs dc
+                               in g + (aeroDrag / pack (vec m))
 
 {-|
   Computes the force of aerodynamic drag acting on the projectile.
