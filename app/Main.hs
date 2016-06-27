@@ -1,9 +1,7 @@
 module Main where
 
 import           Ui
-
-version :: String
-version = "0.1.0.0"
+import           Utils
 
 main :: IO ()
 main = do
