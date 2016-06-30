@@ -25,7 +25,9 @@ executable ballistics-exe
                      , Vec
                      , OpenGL
                      , GLFW-b
-                     , vector
+                     , repa
+                     , repa-algorithms
+                     , pretty
   default-language:    Haskell2010
 
 test-suite ballistics-test
