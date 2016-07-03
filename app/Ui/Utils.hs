@@ -1,41 +1,38 @@
-{-# LANGUAGE GADTs      #-}
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE GADTs #-}
 module Ui.Utils where
 
 import           Control.Concurrent.STM    (TQueue)
 import           Control.Monad.RWS.Strict  as RWS
+import           Data.List                 (intercalate)
 import           Data.Vec                  as V
 import           Graphics.Rendering.OpenGL as GL
 import qualified Graphics.UI.GLFW          as GLFW
 import           Terrain
+import           Ui.Callbacks
 
 -------------------
 -- Useful datatypes
 -------------------
 
--- | Abstraction of various events.
-data Evt =
-    EvtErr        !GLFW.Error !String
-  | EvtWindowSize !GLFW.Window !Int !Int
-  | EvtKey        !GLFW.Window !GLFW.Key !Int !GLFW.KeyState !GLFW.ModifierKeys
-
 -- | The application environment.
 data Environment where
-  Environment :: { envWindow   :: !GLFW.Window
-                 , envEvtQueue :: TQueue Evt
-                 , envTerrain  :: Terrain t => t } -> Environment
+  Environment :: Terrain t => { envWindow   :: !GLFW.Window
+                              , envEvtQueue :: TQueue Evt
+                              , envTerrain  :: !t
+                              } -> Environment
 
 -- | The application state.
 data State = State
-  { stateWindowWidth     :: !Int
-  , stateWindowHeight    :: !Int
-  , stateMouseDown       :: !Bool
-  , stateDragging        :: !Bool
-  , stateDragStartX      :: !Double
-  , stateDragStartY      :: !Double
-  , stateDragStartXAngle :: !Double
-  , stateDragStartYAngle :: !Double
-  , stateZDist           :: !Double }
+  { stateWindowWidth   :: !Int
+  , stateWindowHeight  :: !Int
+  , stateMouseDown     :: !Bool
+  , stateMouseDragging :: !Bool
+  , stateMouseX        :: !Double
+  , stateMouseY        :: !Double
+  , stateZDist         :: !Double
+  , stateAngleX        :: !Double
+  , stateAngleY        :: !Double }
+  deriving (Show)
 
 type App = RWST Environment () State IO ()
 
@@ -79,6 +76,11 @@ drawCross l = do
   preservingMatrix $ do
     rotate 90 $ Vector3 0 0 (1 :: GLdouble)
     drawXArrow (negate l / 2) (l / 2)
+
+  color $ Color3 0 0 (1 :: GLfloat)
   preservingMatrix $ do
     rotate (negate 90) $ Vector3 0 1 (0 :: GLdouble)
     drawXArrow (negate l / 2) (l / 2)
+
+printEvent :: String -> [(String, String)] -> App
+printEvent n fields = liftIO $ putStrLn $ n ++ ": [" ++ intercalate ", " (Prelude.map (\(l, s) -> l ++ ": " ++ s) fields) ++ "]"

@@ -62,3 +62,16 @@ meshgrid xs ys = let (Z R.:. lx) = extent xs
                      mgx = extend (Any R.:. (ly :: Int) R.:. All) xs
                      mgy = R.transpose $ extend (Any R.:. (lx :: Int) R.:. All) ys
                   in (computeUnboxedS mgx, computeUnboxedS mgy)
+
+{-|
+  Clips the given Ord between the two given bounds.
+-}
+clip :: Ord a
+     => a -- ^ lower bound
+     -> a -- ^ upper bound
+     -> a -- ^ clipped thing
+     -> a
+clip lb ub x | lb > ub = error "Lower bound must be lower than or equal to the upper bound."
+             | lb <= x && x <= ub = x
+             | x < lb = lb
+             | x > ub = ub
